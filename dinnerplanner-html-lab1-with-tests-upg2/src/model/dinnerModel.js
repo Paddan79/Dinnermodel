@@ -5,17 +5,17 @@ let ingredients = [];
 class DinnerModel {
 
   constructor() {
-    this.dishes = dishesConst;
+    this.dishes = {};
+    //We'll be using api instead ya yeet
     this.numberOfGuests = 0;
     //TODO Lab 1
     // implement the data structure that will hold number of guests
     // and selected dishes for the dinner menu
-
   }
 
   setNumberOfGuests(num) {
     //TODO Lab 1
-      this.numberOfGuests = num;
+    this.numberOfGuests = num;
   }
 
   getNumberOfGuests() {
@@ -25,7 +25,8 @@ class DinnerModel {
 
   //Returns the dishes that are on the menu for selected type
   getSelectedDishes(type) {
-      return menu.filter(dish => dish.dishTypes.includes(type));  
+    //return menu.filter(dish => dish.dishTypes.includes(type));
+    queryApi("/recipes/search?type="+type);
   }
 
   //Returns all the dishes on the menu.
@@ -36,6 +37,7 @@ class DinnerModel {
   //Returns all ingredients for all the dishes on the menu.
  getAllIngredients(){
     //map(dishesConst.extendedIngredients); // testas inte
+    //return true;
     return dishesConstOld.filter(x => {
       return x.extendedIngredients
     });
@@ -43,21 +45,23 @@ class DinnerModel {
 
   //Returns the total price of the menu (price per serving of each dish multiplied by number of guests).
   getTotalMenuPrice() {
-      debug;
     return menu.reduce((tot, val) => tot + val.pricePerServing, 0) * this.numberOfGuests; // testas inte
-      
   }
 
   //Adds the passed dish to the menu. If the dish of that type already exists on the menu
   //it is removed from the menu and the new one added.
   addDishToMenu(dish) {
-    menu.push(dish);
+    var dishExists = menu.filter(x => x.id == dish.id);
+    if(!(Array.isArray(dishExists) && dishExists.length)){
+      menu.push(dish);
+    }
   }
 
   //Removes dish with specified id from menu
   removeDishFromMenu(id) {
-    let theDish = this.getDish(id);
-    menu = menu.filter(dish => dish != theDish);
+    //let theDish = this.getDish(id);
+    //menu = menu.filter(dish => dish != theDish);
+    menu = menu.filter(dish => dish.id != id);
   }
     
    
@@ -65,7 +69,7 @@ class DinnerModel {
   //Returns all dishes of specific type (i.e. "starter", "main dish" or "dessert").
   //query argument, text, if passed only returns dishes that contain the query in name or one of the ingredients.
   //if you don't pass any query, all the dishes will be returned
-  getAllDishes(type, query) {
+  /*getAllDishes(type, query) {
     return this.dishes.filter(function (dish) {
       let found = true;
       if (query) {
@@ -81,17 +85,39 @@ class DinnerModel {
       }
       return (dish.dishTypes.includes(type) || !type) && found;
     });
+  }*/
+  getAllDishes(type="", query=""){
+    console.log("type" + type);
+    console.log("query" + query);
+    return queryApi("/recipes/search?type="+type+"&query="+query
+    ).then(dishes => dishes.results);
   }
 
   //Returns a dish of specific ID
-  getDish(id) {
+  /*getDish(id) {
     for (let dish of this.dishes) {
       if (dish.id === id) {
         return dish;
       }
     }
     return undefined;
+  }*/
+
+  getDish(id) {
+    return queryApi("/recipes/"+id+"/information");
   }
+
+}
+
+function queryApi(query){
+  return fetch(ENDPOINT + query,
+    {
+      headers: {
+        'X-MASHAPE-KEY': API_KEY
+      }
+    }
+  )
+  .then(response => response.json());
 }
 
 // the dishes constant contains an array of all the
@@ -102,7 +128,7 @@ class DinnerModel {
 // defining the unit i.e. "g", "slices", "ml". Unit
 // can sometimes be empty like in the example of eggs where
 // you just say "5 eggs" and not "5 pieces of eggs" or anything else.
-const dishesConst = [{
+const dishesConstOld = [{
   'id': 1,
   'name': 'French toast',
   'dishTypes': ['starter', 'breakfast'],
